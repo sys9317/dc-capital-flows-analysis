@@ -2,8 +2,7 @@
 
 An exploratory data analysis examining the relationship between capital investment, poverty rates, and racial demographics across counties in the Washington D.C. region.
 
-📊 **[View the full analysis report](https://yourusername.github.io/dc-capital-flows/)** <!-- replace with your GitHub Pages link once published -->
-
+📊 **[View the full analysis report](https://github.com/sys9317/dc-capital-flows-analysis)** 
 ---
 
 ## Overview
