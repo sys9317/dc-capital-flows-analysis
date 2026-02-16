@@ -1,0 +1,238 @@
+---
+title: "DC Region Capital Flows: Poverty & Investment Patterns"
+subtitle: "An exploratory spatial and demographic analysis"
+author: "Yosup Shin"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-title: "Contents"
+    code-fold: true
+    code-tools: true
+    code-line-numbers: true
+    theme: cosmo
+    highlight-style: github
+    fig-width: 9
+    fig-height: 6
+    self-contained: true
+execute:
+  warning: false
+  message: false
+  echo: true
+urlcolor: blue
+---
+
+## Project Overview
+
+This project analyzes capital flows across the Washington, D.C. region to uncover how investment patterns relate to poverty rates and racial demographics at the county level. The goal is to surface whether capital is equitably distributed — or whether structural disparities persist in where money flows.
+
+**Dataset:** [DC Region Capital Flows Feature Data](https://urban-data-catalog.s3.amazonaws.com/drupal-root-live/2023/01/25/DC%20Region%20Capital%20Flows%20Feature%20Data%20-%20Catalog%20Version.xlsx) — Urban Data Catalog (2023)
+
+**Key questions explored:**
+
+1.  Is there a relationship between county population size and poverty rates?
+2.  How does aggregate investment per household vary across racial demographic categories?
+3.  Are there geographic patterns in poverty across the contiguous U.S.?
+
+------------------------------------------------------------------------
+
+## Setup
+
+```{r}
+#| label: setup
+#| code-summary: "Load libraries and configure settings"
+
+# Install tigris if not already available
+if (!requireNamespace("tigris", quietly = TRUE)) install.packages("tigris")
+
+library(tidyverse)
+library(readxl)
+library(tigris)
+library(sf)
+library(scales)
+
+# Suppress scientific notation
+options(scipen = 999)
+```
+
+------------------------------------------------------------------------
+
+## Data Loading
+
+```{r}
+#| label: load-data
+#| code-summary: "Load county-level and racial demographic data"
+
+# Sheet 3: County-level capital flows and poverty data
+capital_flow_data <- read_excel(
+  "data/DC Region Capital Flows Feature Data - Catalog Version.xlsx",
+  sheet = 3
+)
+
+# Sheet 4: Investment by racial demographic category
+racial_data <- read_excel(
+  "data/DC Region Capital Flows Feature Data - Catalog Version.xlsx",
+  sheet = 4
+)
+
+# Load contiguous U.S. state boundaries for mapping
+states <- tigris::states(cb = TRUE, progress_bar = FALSE) |>
+  filter(!STATEFP %in% c("78", "69", "66", "60", "72", "02", "15"))
+```
+
+```{r}
+#| label: data-overview
+#| code-summary: "Preview the capital flows dataset"
+
+glimpse(capital_flow_data)
+```
+
+------------------------------------------------------------------------
+
+## Analysis 1: County Population vs. Poverty Rate
+
+Higher-population counties may have more economic activity, but does that translate to lower poverty? This scatter plot examines the relationship between county population and poverty rate, with a linear trend line to surface any correlation.
+
+```{r}
+#| label: fig-poverty-scatter
+#| fig-cap: "Relationship between county population size and poverty rate across the DC region"
+#| code-summary: "Scatter plot: population vs. poverty rate"
+
+capital_flow_data |>
+  ggplot(aes(x = county_pop, y = poverty_perc)) +
+  geom_point(alpha = 0.55, color = "#2166ac", size = 2.2) +
+  geom_smooth(method = "lm", se = TRUE, color = "#d73027", linewidth = 0.9) +
+  scale_x_continuous(labels = label_comma()) +
+  scale_y_continuous(labels = label_percent(scale = 1)) +
+  labs(
+    title = "County Population vs. Poverty Rate",
+    subtitle = "Each point represents a county in the DC region",
+    x = "County Population",
+    y = "Poverty Rate (%)",
+    caption = "Source: Urban Data Catalog (2023)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold"),
+    plot.subtitle = element_text(color = "grey40"),
+    plot.caption  = element_text(color = "grey50", size = 9),
+    panel.grid.minor = element_blank()
+  )
+```
+
+> **Takeaway:** The trend line reveals whether larger counties tend to have higher or lower poverty rates. A downward slope would suggest that population density or urbanization correlates with reduced poverty — worth investigating further with controls for income and employment.
+
+------------------------------------------------------------------------
+
+## Analysis 2: Investment by Racial Demographic Category
+
+This chart examines aggregate investment per household broken down by racial composition category. It tests whether communities with higher proportions of certain racial groups receive systematically more or less capital investment.
+
+```{r}
+#| label: fig-racial-investment
+#| fig-cap: "Aggregate investment per household across racial demographic categories"
+#| code-summary: "Dot plot: race category vs. investment per household"
+
+racial_data |>
+  ggplot(aes(x = race_cat, y = agg_investment_perhh)) +
+  geom_jitter(
+    width = 0.15, height = 0,
+    size = 2.2, alpha = 0.65,
+    color = "#8c510a"
+  ) +
+  stat_summary(
+    fun = median,
+    geom = "crossbar",
+    width = 0.45,
+    color = "#1b7837",
+    linewidth = 0.6
+  ) +
+  scale_y_continuous(labels = label_dollar(scale = 1)) +
+  labs(
+    title = "Aggregate Investment Per Household by Racial Category",
+    subtitle = "Green crossbar = median investment. Each point = one observation.",
+    x = "Racial Category",
+    y = "Aggregate Investment per Household ($)",
+    caption = "Source: Urban Data Catalog (2023)"
+  ) +
+  theme_light(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold"),
+    plot.subtitle = element_text(color = "grey40"),
+    plot.caption  = element_text(color = "grey50", size = 9),
+    axis.text.x   = element_text(angle = 55, vjust = 0.8, hjust = 0.8),
+    panel.grid.minor = element_blank()
+  )
+```
+
+> **Takeaway:** Variation in median investment across racial categories points to potential structural disparities in capital distribution. Categories with a wide spread of dots indicate high within-group variability — possible evidence of inequality within demographic segments as well as between them.
+
+------------------------------------------------------------------------
+
+## Analysis 3: Poverty Rate — Geographic Distribution
+
+To add spatial context, this map overlays county-level poverty rates on a U.S. state basemap. Geographic clustering can reveal regional patterns that purely tabular analysis would miss.
+
+```{r}
+#| label: fig-poverty-map
+#| fig-cap: "U.S. county poverty rates with state boundaries (contiguous states only)"
+#| code-summary: "Choropleth map: poverty rate by county"
+
+# Check whether capital_flow_data has geometry; if not, note the limitation
+if (inherits(capital_flow_data, "sf")) {
+
+  ggplot() +
+    geom_sf(data = states, fill = "grey95", color = "white", linewidth = 0.4) +
+    geom_sf(
+      data = capital_flow_data,
+      aes(fill = poverty_perc),
+      color = NA,
+      alpha = 0.85
+    ) +
+    scale_fill_distiller(
+      palette  = "RdYlBu",
+      direction = -1,
+      name     = "Poverty Rate (%)",
+      labels   = label_percent(scale = 1)
+    ) +
+    labs(
+      title   = "Poverty Rate by County",
+      subtitle = "Contiguous United States",
+      caption = "Source: Urban Data Catalog (2023) | Boundaries: U.S. Census TIGER/Line"
+    ) +
+    theme_void(base_size = 13) +
+    theme(
+      plot.title    = element_text(face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(color = "grey40", hjust = 0.5),
+      plot.caption  = element_text(color = "grey50", size = 9, hjust = 1),
+      legend.position = "bottom"
+    )
+
+} else {
+  message(
+    "Note: `capital_flow_data` does not contain geometry. ",
+    "To render the choropleth map, join this dataset to a county-level ",
+    "shapefile using `tigris::counties()` matched on FIPS codes, ",
+    "then re-run this chunk."
+  )
+}
+```
+
+> **Next step:** If `capital_flow_data` includes a FIPS code column, it can be joined to `tigris::counties()` to produce a full choropleth. This is a planned extension to make the spatial analysis complete.
+
+------------------------------------------------------------------------
+
+## Summary & Next Steps
+
+| Question | Finding |
+|--------------------------------------|----------------------------------|
+| Population ↔ Poverty | Linear trend visible; direction and strength depend on data |
+| Race category ↔ Investment | Visible median differences across categories |
+| Geographic clustering | Requires geometry join to fully explore |
+
+**Potential extensions:** - Run a multivariate regression controlling for income, unemployment, and geography - Join the county data to TIGER/Line shapefiles for a full choropleth - Disaggregate investment types (mortgage, small business, etc.) by racial category - Compare DC-region patterns to national benchmarks
+
+------------------------------------------------------------------------
+
+*Analysis by Yosup Shin \| Data: Urban Data Catalog 2023 \| Tools: R, tidyverse, tigris, sf*
