@@ -2,7 +2,8 @@
 
 An exploratory data analysis examining the relationship between capital investment, poverty rates, and racial demographics across counties in the Washington D.C. region.
 
-📊 **[View the full analysis report](https://github.com/sys9317/dc-capital-flows-analysis)** 
+The full analysis, prose and code, is in [`dc_capital_flows_analysis.qmd`](dc_capital_flows_analysis.qmd) (Quarto). The rendered HTML report is not committed; run `quarto render dc_capital_flows_analysis.qmd` to build it.
+
 ---
 
 ## Overview
@@ -22,34 +23,30 @@ This project uses publicly available data from the Urban Data Catalog to investi
 ## Project Structure
 
 ```
-dc-capital-flows/
+dc-capital-flows-analysis/
 ├── dc_capital_flows_analysis.qmd   # Main analysis (Quarto)
-├── dc_capital_flows_analysis.html  # Rendered report
 ├── data/
-│   ├── README.md                   # Instructions to download the raw data
-│   └── *.xlsx                      # Gitignored — see data/README.md
+│   └── DC Region Capital Flows Feature Data - Catalog Version.xlsx   # raw data (committed, ~45 KB)
+├── LICENSE
 └── README.md
 ```
+
+Run `quarto render` to produce `dc_capital_flows_analysis.html`.
 
 ## Getting Started
 
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/yourusername/dc-capital-flows.git
-cd dc-capital-flows
+git clone https://github.com/sys9317/dc-capital-flows-analysis.git
+cd dc-capital-flows-analysis
 ```
 
-### 2. Download the data
+### 2. Data
 
-The raw data file is not tracked in this repository. Download it from the Urban Data Catalog and place it in the `data/` folder:
+The raw data file is included in `data/` (public, ~45 KB).
 
 **Source:** [DC Region Capital Flows Feature Data (Urban Data Catalog, 2023)](https://urban-data-catalog.s3.amazonaws.com/drupal-root-live/2023/01/25/DC%20Region%20Capital%20Flows%20Feature%20Data%20-%20Catalog%20Version.xlsx)
-
-Save as:
-```
-data/DC Region Capital Flows Feature Data - Catalog Version.xlsx
-```
 
 ### 3. Render the report
 
