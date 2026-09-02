@@ -2,7 +2,7 @@
 
 An exploratory data analysis examining the relationship between capital investment, poverty rates, and racial demographics across counties in the Washington D.C. region.
 
-The full analysis, prose and code, is in [`dc_capital_flows_analysis.qmd`](dc_capital_flows_analysis.qmd) (Quarto). The rendered HTML report is not committed; run `quarto render dc_capital_flows_analysis.qmd` to build it.
+**[Read the rendered report](https://sys9317.github.io/dc-capital-flows-analysis/)** &nbsp;·&nbsp; source in [`dc_capital_flows_analysis.qmd`](dc_capital_flows_analysis.qmd) (Quarto). Rebuild with `quarto render dc_capital_flows_analysis.qmd`.
 
 ---
 
